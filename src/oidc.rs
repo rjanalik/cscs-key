@@ -7,8 +7,7 @@ use anyhow::Context;
 //use log::{info, debug};
 use log::info;
 
-use crate::config::SshKeysConfig;
-//use crate::config::{Config, SshKeysConfig};
+use crate::config::Config;
 //use crate::password_manager::PasswordManager;
 
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
@@ -23,7 +22,7 @@ use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
 use url::Url;
 
-pub fn oidc_get_access_token(config: &SshKeysConfig) -> anyhow::Result<String> {
+pub fn oidc_get_access_token(config: &Config) -> anyhow::Result<String> {
     info!("Get OIDC token");
 
     // In 4.x, we create a reusable reqwest client first

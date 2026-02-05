@@ -11,12 +11,7 @@ struct Cli {
     #[arg(short, long, global = true, help = "Enable verbose output")]
     verbose: bool,
     #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    SshKey(ssh::SshArgs),
+    command: ssh::Commands,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -34,9 +29,7 @@ fn main() -> anyhow::Result<()> {
         println!("Verbose output ...");
     }
 
-    match &cli.command {
-        Commands::SshKey(args) => ssh::run(args, &config)?,
-    }
+    ssh::run(&cli.command, &config)?;
 
     Ok(())
 }

@@ -9,11 +9,6 @@ use log::info;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Config {
-    pub ssh_keys: SshKeysConfig,
-}
-
-#[derive(Debug, Default, Deserialize, Serialize)]
-pub struct SshKeysConfig {
     #[serde(deserialize_with = "deserialize_path")]
     pub key_path: PathBuf,
     //#[serde(deserialize_with = "duration-str::deserialize_from_str", serialize_with = "duration-str::serialize_to_string", default = "default_key_validity_duration")]
@@ -41,7 +36,7 @@ impl Config {
                     .with_context(|| format!("Failed to read config file at {:?}", config_file_path))?;
                 let file_config: Config = toml::from_str(&config_str)
                     .with_context(|| format!("Failed to parse config file at {:?}", config_file_path))?;
-                config.ssh_keys = file_config.ssh_keys;
+                config = file_config;
             } else {
                 info!("No configuration file found at {:?}. Creating default.", config_file_path);
 

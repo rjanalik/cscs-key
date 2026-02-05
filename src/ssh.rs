@@ -10,17 +10,11 @@ use serde::{Serialize, Deserialize, Deserializer};
 use anyhow::{anyhow, bail};
 use log::{info, debug};
 
-use crate::config::{Config, SshKeysConfig};
+use crate::config::Config;
 use crate::oidc::oidc_get_access_token;
 
-#[derive(Args, Debug)]
-pub struct SshArgs {
-    #[command(subcommand)]
-    command: SshCommands,
-}
-
 #[derive(Subcommand, Debug)]
-enum SshCommands {
+pub enum Commands {
     GenOIDC,
     SignOIDC,
     Status,
@@ -84,24 +78,21 @@ where
     Ok(s)
 }
 
-pub fn run(args: &SshArgs, config: &Config) -> anyhow::Result<()> {
-    let ssh_config = &config.ssh_keys;
-
+pub fn run(command: &Commands, config: &Config) -> anyhow::Result<()> {
     debug!{"ssh-key command"};
-    match &args.command {
-        SshCommands::GenOIDC => download_key_oidc(args, &ssh_config)?,
-        SshCommands::SignOIDC => sign_key_oidc(args, &ssh_config)?,
-        SshCommands::Status => status_key(args, &ssh_config)?,
-        SshCommands::List => list_keys(args, &ssh_config)?,
-        SshCommands::Revoke => revoke_keys(args, &ssh_config)?,
+    match command {
+        Commands::GenOIDC => download_key_oidc(&config)?,
+        Commands::SignOIDC => sign_key_oidc(&config)?,
+        Commands::Status => status_key(&config)?,
+        Commands::List => list_keys(&config)?,
+        Commands::Revoke => revoke_keys(&config)?,
     }
 
     Ok(())
 }
 
-fn download_key_oidc(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
+fn download_key_oidc(config: &Config) -> anyhow::Result<()> {
     debug!("ssh-key gen-new subcommand");
-    debug!("{:?}", args);
     debug!("{:?}", config);
 
     let key_duration = SshKeyDuration {
@@ -167,9 +158,8 @@ fn download_key_oidc(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<(
     Ok(())
 }
 
-fn sign_key_oidc(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
+fn sign_key_oidc(config: &Config) -> anyhow::Result<()> {
     debug!("ssh-key gen-new subcommand");
-    debug!("{:?}", args);
     debug!("{:?}", config);
 
     let private_key_path = config.key_path.clone();
@@ -231,9 +221,8 @@ fn sign_key_oidc(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn status_key(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
+fn status_key(config: &Config) -> anyhow::Result<()> {
     debug!("ssh-key status subcommand");
-    debug!("{:?}", args);
     debug!("{:?}", config);
 
     let metadata_result = metadata(&config.key_path);
@@ -274,9 +263,8 @@ fn status_key(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn list_keys(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
+fn list_keys(config: &Config) -> anyhow::Result<()> {
     debug!("ssh-key list subcommand");
-    debug!("{:?}", args);
     debug!("{:?}", config);
 
     todo!("ssh-key list");
@@ -284,9 +272,8 @@ fn list_keys(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn revoke_keys(args: &SshArgs, config: &SshKeysConfig) -> anyhow::Result<()> {
+fn revoke_keys(config: &Config) -> anyhow::Result<()> {
     debug!("ssh-key revoke subcommand");
-    debug!("{:?}", args);
     debug!("{:?}", config);
 
     todo!("ssh-key revoke");
