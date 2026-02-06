@@ -96,7 +96,7 @@ fn download_key_oidc(config: &Config) -> anyhow::Result<()> {
     debug!("{:?}", config);
 
     let key_duration = SshKeyDuration {
-        duration: config.key_validity_str.clone(),
+        duration: config.key_validity.clone(),
     };
 
     info!("Get OIDC token");
@@ -167,7 +167,7 @@ fn sign_key_oidc(config: &Config) -> anyhow::Result<()> {
 
     let public_key = PublicKey {
         public_key: content,
-        duration: config.key_validity_str.clone(),
+        duration: config.key_validity.clone(),
     };
 
     info!("Get OIDC token");
@@ -245,7 +245,7 @@ fn status_key(config: &Config) -> anyhow::Result<()> {
     let duration_since_modified = now.duration_since(modified_time)
         .map_err(|e| anyhow!("System time is earlier than file modification time: {}", e))?;
 
-    let validity = config.key_validity;
+    let validity = duration_str::parse(config.key_validity.clone()).unwrap();
 
     if duration_since_modified > validity {
         println!("SSH key is EXPIRED (last modified {} ago).",
