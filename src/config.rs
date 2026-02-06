@@ -15,7 +15,6 @@ fn default_key_path() -> PathBuf {
     let relative_path = PathBuf::from(".ssh/cscs-key");
     home_dir.join(relative_path)
 }
-//fn default_key_validity() -> Duration { Duration::from_secs(60) }
 fn default_key_validity() -> String { "1min".to_string() }
 fn default_pkce_client_id() -> String { "authx-cli".to_string() }
 fn default_issuer_url() -> String { "https://auth.cscs.ch/auth/realms/cscs".to_string() }
@@ -26,9 +25,6 @@ fn default_sign_url() -> String { "https://api-ssh-service.hpc-ssh.svc.cscs.ch/a
 pub struct Config {
     #[serde(deserialize_with = "deserialize_path", default = "default_key_path")]
     pub key_path: PathBuf,
-    //#[serde(deserialize_with = "duration-str::deserialize_from_str", serialize_with = "duration-str::serialize_to_string", default = "default_key_validity_duration")]
-    //#[serde(deserialize_with = "deserialize_duration", default = "default_key_validity")]
-    //pub key_validity: Duration,
     #[serde(default = "default_key_validity")]
     pub key_validity: String,
     #[serde(default = "default_pkce_client_id")]
@@ -46,7 +42,6 @@ impl Default for Config {
         Self {
             key_path: default_key_path(),
             key_validity: default_key_validity(),
-            //key_validity_str: default_key_validity_str(),
             pkce_client_id: default_pkce_client_id(),
             issuer_url: default_issuer_url(),
             keys_url: default_keys_url(),
