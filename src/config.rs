@@ -1,11 +1,6 @@
+use clap::Parser;
 use serde::{Deserialize, Deserializer, Serialize};
-use directories::ProjectDirs;
-use std::fs;
 use std::path::PathBuf;
-use std::time::Duration;
-use duration_str::deserialize_duration;
-use anyhow::Context;
-use log::info;
 
 // Default config values
 fn default_key_path() -> PathBuf {
@@ -23,18 +18,34 @@ fn default_sign_url() -> String { "https://api-ssh-service.hpc-ssh.svc.cscs.ch/a
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    #[serde(deserialize_with = "deserialize_path", default = "default_key_path")]
     pub key_path: PathBuf,
-    #[serde(default = "default_key_validity")]
     pub key_validity: String,
-    #[serde(default = "default_pkce_client_id")]
     pub pkce_client_id: String,
-    #[serde(default = "default_issuer_url")]
     pub issuer_url: String,
-    #[serde(default = "default_keys_url")]
     pub keys_url: String,
-    #[serde(default = "default_sign_url")]
     pub sign_url: String,
+}
+
+#[derive(Parser, Debug, Deserialize, Serialize)]
+pub struct ConfigCliOverride {
+    #[arg(long, global = true)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_path: Option<PathBuf>,
+    #[arg(long, global = true)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_validity: Option<String>,
+    #[arg(long, global = true)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pkce_client_id: Option<String>,
+    #[arg(long, global = true)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_url: Option<String>,
+    #[arg(long, global = true)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keys_url: Option<String>,
+    #[arg(long, global = true)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sign_url: Option<String>,
 }
 
 impl Default for Config {
@@ -47,40 +58,6 @@ impl Default for Config {
             keys_url: default_keys_url(),
             sign_url: default_sign_url(),
         }
-    }
-}
-
-impl Config {
-    pub fn load() -> anyhow::Result<Self> {
-        let mut config = Self::default();
-
-        let proj_dirs = ProjectDirs::from("ch", "cscs", "cscs-key")
-            .context("Could not determine configuration directory")?;
-        let config_dir = proj_dirs.config_dir();
-        let config_file_path = config_dir.join("config.toml");
-
-        if !config_file_path.exists() {
-            info!("Creating default configuration at {:?}", config_file_path);
-
-            fs::create_dir_all(config_dir)
-                .with_context(|| format!("Failed to create config directory {:?}", config_dir))?;
-            let default_config = Self::default();
-            let default_toml = toml::to_string_pretty(&default_config)
-                .context("Failed to serialize default config")?;
-            fs::write(&config_file_path, default_toml)
-                .with_context(|| format!("Failed to write default config file to {:?}", config_file_path))?;
-
-            return Ok(default_config)
-        }
-
-        info!("Loading configuration from {:?}", config_file_path);
-
-        let config_str = fs::read_to_string(&config_file_path)
-            .with_context(|| format!("Failed to read config file at {:?}", config_file_path))?;
-        let config: Config = toml::from_str(&config_str)
-            .with_context(|| format!("Failed to parse config file at {:?}", config_file_path))?;
-
-        Ok(config)
     }
 }
 
