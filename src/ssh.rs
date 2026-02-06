@@ -1,8 +1,8 @@
-use clap::{Args, Subcommand};
+use clap::Subcommand;
 use std::fs;
 use std::fs::{File, metadata};
 use std::io::Write;
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::Debug;
 use std::time::SystemTime;
 use std::path::PathBuf;
 use reqwest;
@@ -265,7 +265,7 @@ fn list_keys(config: &Config) -> anyhow::Result<()> {
 
     todo!("ssh-key list");
 
-    Ok(())
+    //Ok(())
 }
 
 fn revoke_keys(config: &Config) -> anyhow::Result<()> {
@@ -274,7 +274,7 @@ fn revoke_keys(config: &Config) -> anyhow::Result<()> {
 
     todo!("ssh-key revoke");
 
-    Ok(())
+    //Ok(())
 }
 
 fn format_duration(duration: &std::time::Duration) -> String {
