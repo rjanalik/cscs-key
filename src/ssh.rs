@@ -11,7 +11,7 @@ use anyhow::{anyhow, bail};
 use log::{info, debug};
 
 use crate::config::Config;
-use crate::oidc::oidc_get_access_token;
+use crate::oidc::get_access_token;
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
@@ -101,7 +101,7 @@ fn download_key_oidc(config: &Config) -> anyhow::Result<()> {
 
     info!("Get OIDC token");
 
-    let access_token = oidc_get_access_token(&config)?;
+    let access_token = get_access_token(&config)?;
     println!("got token: {}", access_token);
 
     let client = reqwest::blocking::Client::new();
@@ -172,7 +172,7 @@ fn sign_key_oidc(config: &Config) -> anyhow::Result<()> {
 
     info!("Get OIDC token");
 
-    let access_token = oidc_get_access_token(&config)?;
+    let access_token = get_access_token(&config)?;
 
     let client = reqwest::blocking::Client::new();
 

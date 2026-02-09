@@ -7,6 +7,7 @@ use figment::{Figment, providers::{Format, Toml, Serialized}};
 use crate::config::{Config, ConfigCliOverride};
 
 mod config;
+mod state;
 mod oidc;
 mod ssh;
 

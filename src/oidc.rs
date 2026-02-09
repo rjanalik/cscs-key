@@ -4,11 +4,12 @@ use reqwest;
 //use serde::{Serialize, Deserialize};
 //use anyhow::{anyhow, bail, Context};
 use anyhow::Context;
+use chrono::{Utc, Duration};
 //use log::{info, debug};
 use log::info;
 
 use crate::config::Config;
-//use crate::password_manager::PasswordManager;
+use crate::state::{AppState, TokenStore};
 
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::{
@@ -17,12 +18,81 @@ use openidconnect::{
     CsrfToken, Nonce,
     OAuth2TokenResponse,
     TokenResponse,
+    RefreshToken,
 };
 use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
 use url::Url;
 
-pub fn oidc_get_access_token(config: &Config) -> anyhow::Result<String> {
+pub fn get_access_token(config: &Config) -> anyhow::Result<String> {
+    let mut state = AppState::load()?;
+
+    // Try to load token from cache
+    if let Some(token) = state.oidc_token {
+        info!("Token exists in store.");
+        // Is the access token still valid?
+        if !token.is_expired() {
+            info!("Token exists in store and is valid.");
+            return Ok(token.access_token);
+        }
+
+        // Token is expired, try to use the refresh token
+        if let Some(refresh_token) = &token.refresh_token {
+            info!("Access token expired, attempting refresh...");
+            match refresh_access_token(config, refresh_token) {
+                Ok(new_token) => {
+                    let ret_access_token = new_token.access_token.clone();
+                    state.oidc_token = Some(new_token);
+                    state.save()?;
+                    return Ok(ret_access_token);
+                }
+                Err(e) => {
+                    info!("Refresh failed: {}. Falling back to browser login.", e);
+                }
+            }
+        }
+    }
+
+    info!("Token does not exist in store or was not refreshed -> browser authentication.");
+    // Cache or refresh failed -> Browser login
+    let new_token = login_via_browser(config)?;
+    let ret_access_token = new_token.access_token.clone();
+    state.oidc_token = Some(new_token);
+    state.save()?;
+    Ok(ret_access_token)
+}
+
+fn refresh_access_token(config: &Config, refresh_token: &str) -> anyhow::Result<TokenStore> {
+    let http_client = reqwest::blocking::Client::new();
+    let issuer_url = IssuerUrl::new(config.issuer_url.clone())?;
+    let provider_metadata = CoreProviderMetadata::discover(&issuer_url, &http_client)?;
+
+    let client = CoreClient::from_provider_metadata(
+        provider_metadata,
+        ClientId::new(config.pkce_client_id.clone()),
+        None,
+    );
+
+    let token_response = client
+        .exchange_refresh_token(&RefreshToken::new(refresh_token.to_string()))?
+        .request(&http_client)
+        .context("Failed to exchange refresh token")?;
+
+    let id_token = token_response
+        .id_token()
+        .ok_or_else(|| anyhow::anyhow!("Server did not return an ID token"))?;
+    let expires_in = token_response.expires_in().unwrap_or(std::time::Duration::ZERO);
+    let expiration = Utc::now() + Duration::from_std(expires_in).unwrap();
+
+    Ok(TokenStore {
+        access_token: token_response.access_token().secret().to_string(),
+        refresh_token: Some(token_response.refresh_token().unwrap().secret().to_string()),
+        id_token: Some(id_token.to_string()),
+        expiration: Some(expiration),
+    })
+}
+
+fn login_via_browser(config: &Config) -> anyhow::Result<TokenStore> {
     info!("Get OIDC token");
 
     // In 4.x, we create a reusable reqwest client first
@@ -99,7 +169,14 @@ pub fn oidc_get_access_token(config: &Config) -> anyhow::Result<String> {
         .ok_or_else(|| anyhow::anyhow!("Server did not return an ID token"))?;
     let id_token_verifier = client.id_token_verifier();
     let claims = id_token.claims(&id_token_verifier, &nonce)?;
-    println!("Verified identity for user: {}", claims.subject().as_str());
+    let expires_in = token_response.expires_in().unwrap_or(std::time::Duration::ZERO);
+    let expiration = Utc::now() + Duration::from_std(expires_in).unwrap();
 
-    Ok(token_response.access_token().secret().to_string())
+    Ok(TokenStore {
+        access_token: token_response.access_token().secret().to_string(),
+        refresh_token: Some(token_response.refresh_token().unwrap().secret().to_string()),
+        id_token: Some(id_token.to_string()),
+        //expiration: Some(claims.expiration()),
+        expiration: Some(expiration),
+    })
 }

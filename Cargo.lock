@@ -326,6 +326,7 @@ name = "cscs-key"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "directories",
  "dirs",
@@ -337,6 +338,7 @@ dependencies = [
  "openidconnect",
  "reqwest",
  "serde",
+ "serde_json",
  "toml",
  "url",
  "webbrowser",
