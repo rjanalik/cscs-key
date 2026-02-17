@@ -182,7 +182,6 @@ fn login_via_browser(config: &Config) -> anyhow::Result<TokenStore> {
         .id_token()
         .ok_or_else(|| anyhow::anyhow!("Server did not return an ID token"))?;
     let id_token_verifier = client.id_token_verifier();
-    let claims = id_token.claims(&id_token_verifier, &nonce)?;
     let expires_in = token_response.expires_in().unwrap_or(std::time::Duration::ZERO);
     let expiration = Utc::now() + Duration::from_std(expires_in).unwrap();
 
@@ -190,7 +189,6 @@ fn login_via_browser(config: &Config) -> anyhow::Result<TokenStore> {
         access_token: token_response.access_token().secret().to_string(),
         refresh_token: Some(token_response.refresh_token().unwrap().secret().to_string()),
         id_token: Some(id_token.to_string()),
-        //expiration: Some(claims.expiration()),
         expiration: Some(expiration),
     })
 }
