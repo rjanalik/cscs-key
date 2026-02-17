@@ -1,7 +1,7 @@
 //use std::fs::{File, metadata};
 use std::io::Write;
 use reqwest;
-//use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 //use anyhow::{anyhow, bail, Context};
 use anyhow::Context;
 use chrono::{Utc, Duration};
@@ -24,7 +24,21 @@ use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
 use url::Url;
 
+#[derive(Deserialize, Debug)]
+struct ApiKeyResponse {
+    access_token: String,
+    expires_in: i64,
+    id_token: String,
+}
+
 pub fn get_access_token(config: &Config) -> anyhow::Result<String> {
+    if let Ok(api_key) = std::env::var("CSCS_API_KEY") {
+        info!("Authenticating via Service Account API Key...");
+        let new_store = login_via_api_key(config, &api_key)?;
+        // We probably DON'T want to save service account tokens to the user's home cache
+        return Ok(new_store.access_token);
+    }
+
     let mut state = AppState::load()?;
 
     // Try to load token from cache
@@ -177,6 +191,32 @@ fn login_via_browser(config: &Config) -> anyhow::Result<TokenStore> {
         refresh_token: Some(token_response.refresh_token().unwrap().secret().to_string()),
         id_token: Some(id_token.to_string()),
         //expiration: Some(claims.expiration()),
+        expiration: Some(expiration),
+    })
+}
+
+fn login_via_api_key(config: &Config, api_key: &str) -> anyhow::Result<TokenStore> {
+    info!("Get OIDC token using API Key");
+
+    let token_url = "https://api-service-account.hpc-user.tds.cscs.ch/api/v1/auth/token".to_string();
+
+    let client = reqwest::blocking::Client::new();
+
+    let response = client.post(token_url)
+        .header("X-API-Key", api_key)
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .send()?;
+
+    let response_struct: ApiKeyResponse = response.json()?;
+
+    let expires_in = Duration::seconds(response_struct.expires_in);
+    let expiration = Utc::now() + expires_in;
+
+    Ok(TokenStore {
+        access_token: response_struct.access_token,
+        refresh_token: None,
+        id_token: Some(response_struct.id_token),
         expiration: Some(expiration),
     })
 }
